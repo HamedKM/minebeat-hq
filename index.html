@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minebeat HQ</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Minebeat HQ">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-512.png">
+<style>
+:root{
+  --bg:#0f0f14;--panel:#17171f;--panel2:#1e1e28;--line:#2a2a36;--text:#f2f2f5;--muted:#9a9aab;
+  --pink:#ff4fa3;--violet:#8b5cf6;--ok:#3ecf8e;--warn:#f5a524;--bad:#f0506e;--info:#4aa8ff;
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px 40px}
+header{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--pink),var(--violet));display:grid;place-items:center;font-weight:800;font-size:15px;letter-spacing:-.5px}
+h1{font-size:20px;margin:0;letter-spacing:-.3px}
+.sub{color:var(--muted);font-size:13px}
+.grow{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 12px;font-size:14px}
+.btn:hover{border-color:#3a3a4a}
+.btn.primary{background:linear-gradient(135deg,var(--pink),var(--violet));border:0;font-weight:600}
+.section-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:26px 0 10px;font-weight:600}
+.todo{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.todo-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line);text-decoration:none}
+.todo-item:first-child{border-top:0}
+.todo-item:hover{background:var(--panel2)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}.dot.info{background:var(--info)}.dot.ok{background:var(--ok)}
+.tag{font-size:12px;color:var(--muted);white-space:nowrap}
+.empty{padding:18px 16px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.card-h{display:flex;align-items:center;gap:10px}
+.card-h h2{font-size:16px;margin:0}
+.pill{font-size:11px;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.pill.ok{color:var(--ok);border-color:#1f4d3a}.pill.bad{color:var(--bad);border-color:#5a2533}.pill.warn{color:var(--warn);border-color:#5a4318}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel2);border-radius:12px;padding:10px}
+.stat b{display:block;font-size:20px;letter-spacing:-.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat span{font-size:12px;color:var(--muted)}
+.stat.hl b{color:var(--pink)}
+.stat.alert b{color:var(--warn)}
+.list{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.row{display:flex;gap:8px;align-items:center;font-size:13px}
+.row .muted{color:var(--muted)}
+.muted{color:var(--muted)}
+.card-f{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap}
+.card-f a{font-size:13px;text-decoration:none;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.card-f a:hover{color:var(--text)}
+.err{font-size:13px;color:var(--warn);background:#2a2214;border-radius:10px;padding:10px}
+.bar{height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.bar i.warn{background:var(--warn)}.bar i.bad{background:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:7px 0;border-top:1px solid var(--line)}
+tr:first-child td{border-top:0}
+td.r{text-align:right;color:var(--muted);white-space:nowrap}
+#login{min-height:80vh;display:grid;place-items:center}
+.login-box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;width:min(360px,100%);display:flex;flex-direction:column;gap:14px;text-align:center}
+.login-box input{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px;font:inherit;text-align:center}
+.login-box label{font-size:13px;color:var(--muted);display:flex;gap:8px;justify-content:center;align-items:center}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+@media (max-width:420px){.grid{grid-template-columns:1fr}.stat b{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<section id="login" class="hidden">
+  <form class="login-box" id="loginForm">
+    <div class="logo" style="margin:0 auto;width:52px;height:52px;font-size:20px">HQ</div>
+    <h1>Minebeat HQ</h1>
+    <div class="sub">Panneau central de tous les projets</div>
+    <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password" required>
+    <label><input type="checkbox" id="remember" checked> Rester connecté sur cet appareil</label>
+    <button class="btn primary" type="submit" id="loginBtn">Entrer</button>
+    <div id="loginErr" class="err hidden"></div>
+  </form>
+</section>
+
+<section id="app" class="hidden">
+  <header>
+    <div class="logo">HQ</div>
+    <div class="grow">
+      <h1>Minebeat HQ</h1>
+      <div class="sub" id="updated">Chargement…</div>
+    </div>
+    <button class="btn" id="refresh" title="Actualiser">↻</button>
+    <button class="btn" id="logout" title="Se déconnecter">⎋</button>
+  </header>
+
+  <div class="section-title">À traiter maintenant</div>
+  <div class="todo" id="todo"><div class="empty"><span class="spin"></span> Chargement…</div></div>
+
+  <div class="section-title">Projets</div>
+  <div class="grid" id="projects"></div>
+
+  <div class="section-title">Infrastructure</div>
+  <div class="grid" id="infra"></div>
+</section>
+</div>
+
+<script>
+const FN = 'https://jzzxetoejcgzajekceos.supabase.co/functions/v1/hq';
+const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6enhldG9lamNnemFqZWtjZW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDc4NDQsImV4cCI6MjEwNDk4Mzg0NH0.-NnMtlYYIyrfKP0cf94-FGxqlanWKrG_bxsYUrZSyCo';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get: (k) => { try { return localStorage.getItem(k) || sessionStorage.getItem(k); } catch { return null; } },
+  set: (k, v, keep) => { try { (keep ? localStorage : sessionStorage).setItem(k, v); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch {} },
+};
+let password = store.get('hq_pw') || '';
+let timer = null;
+
+async function call(action) {
+  const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: 'Bearer ' + ANON }, body: JSON.stringify({ password, action }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || ('Erreur ' + r.status)); e.code = j.error; throw e; }
+  return j;
+}
+
+// ---------- Formats ----------
+const nf = new Intl.NumberFormat('fr-FR');
+const n = (v) => nf.format(v || 0);
+const dt = (millimes) => nf.format(Math.round((millimes || 0) / 1000)) + ' DT';
+const mb = (b) => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' Go' : Math.round((b || 0) / 1048576) + ' Mo';
+const ago = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+  const m = Math.round((Date.now() - d) / 60000);
+  if (m < 1) return "à l'instant"; if (m < 60) return 'il y a ' + m + ' min';
+  const h = Math.round(m / 60); if (h < 24) return 'il y a ' + h + ' h';
+  return 'il y a ' + Math.round(h / 24) + ' j';
+};
+const days = (iso) => Math.floor((new Date(iso) - Date.now()) / 864e5);
+const stat = (v, label, cls = '') => `<div class="stat ${cls}"><b>${v}</b><span>${label}</span></div>`;
+const isErr = (o) => !o || o.error;
+
+const QS_STATUS = { new: 'à traiter', shipping: 'en livraison', delivered: 'livrée', cancelled: 'annulée' };
+const QS_PAY = { cod: 'à la livraison', card: 'carte', preorder: 'précommande' };
+
+// ---------- À traiter ----------
+function todos(d) {
+  const t = [];
+  const add = (lvl, text, tag, href) => t.push({ lvl, text, tag, href });
+  const P = d.projects;
+  for (const s of d.sites) if (!s.ok) add('bad', `${s.name} ne répond pas`, 'Infrastructure', s.url);
+  const qs = P.quiet_sense;
+  if (isErr(qs)) add('warn', `Quiet Sense : ${qs.error}`, 'Quiet Sense');
+  else {
+    const o = qs.orders;
+    if (o.waiting) add('bad', `${o.waiting} commande${o.waiting > 1 ? 's' : ''} à préparer`, 'Quiet Sense', 'https://quiet-sense.com/admin');
+    if (o.preorders) add('info', `${o.preorders} précommande${o.preorders > 1 ? 's' : ''} en cours`, 'Quiet Sense', 'https://quiet-sense.com/admin');
+    if (qs.low_stock?.length) add('warn', `${qs.low_stock.length} article${qs.low_stock.length > 1 ? 's' : ''} en stock bas`, 'Quiet Sense', 'https://quiet-sense.com/admin');
+  }
+  const fl = P.floriqa;
+  if (isErr(fl)) add('warn', `Floriqa : ${fl.error}`, 'Floriqa');
+  else {
+    if (fl.bookings.new) add('bad', `${fl.bookings.new} nouvelle${fl.bookings.new > 1 ? 's' : ''} demande${fl.bookings.new > 1 ? 's' : ''} de booking`, 'Floriqa', 'https://floriqa.xyz/admin/');
+    if (fl.access_requests) add('warn', `${fl.access_requests} demande${fl.access_requests > 1 ? 's' : ''} d'accès à la room`, 'Floriqa', 'https://floriqa.xyz/admin/');
+  }
+  if (isErr(P.egoshot)) add('warn', `EgoShot : ${P.egoshot.error}`, 'EgoShot');
+  if (isErr(P.paradisme)) add('warn', `Paradisme : ${P.paradisme.error}`, 'Paradisme');
+  for (const x of d.domains) if (x.expires && days(x.expires) < 45) add(days(x.expires) < 15 ? 'bad' : 'warn', `Le domaine ${x.domain} expire dans ${days(x.expires)} jours`, 'Domaines');
+  const s = d.supabase;
+  if (s && !s.error && s.db_bytes / s.limits.db_bytes > 0.8) add('warn', `Base Supabase remplie à ${Math.round(s.db_bytes / s.limits.db_bytes * 100)} %`, 'Supabase');
+  const order = { bad: 0, warn: 1, info: 2 };
+  return t.sort((a, b) => order[a.lvl] - order[b.lvl]);
+}
+
+// ---------- Cartes projets ----------
+function card(name, pill, body, links) {
+  return `<article class="card"><div class="card-h"><h2 class="grow">${name}</h2>${pill}</div>${body}
+    <div class="card-f">${links.map(([l, h]) => `<a href="${h}" target="_blank" rel="noopener">${l} ↗</a>`).join('')}</div></article>`;
+}
+const pillFor = (site) => site ? (site.ok ? '<span class="pill ok">en ligne</span>' : '<span class="pill bad">hors ligne</span>') : '';
+
+function renderProjects(d) {
+  const P = d.projects, site = (id) => d.sites.find((s) => s.id === id);
+  const out = [];
+
+  const qs = P.quiet_sense;
+  out.push(card('Quiet Sense', pillFor(site('quiet-sense')), isErr(qs) ? `<div class="err">${esc(qs.error)}</div>` : `
+    <div class="stats">
+      ${stat(n(qs.orders.waiting), 'en attente', qs.orders.waiting ? 'hl' : '')}
+      ${stat(n(qs.orders.shipping), 'en livraison')}
+      ${stat(n(qs.orders.delivered_month), 'livrées ce mois')}
+      ${stat(dt(qs.money.cashed_today), "encaissé aujourd'hui")}
+      ${stat(dt(qs.money.cashed_month), 'encaissé ce mois')}
+      ${stat(dt(qs.money.to_collect), 'à encaisser')}
+    </div>
+    ${qs.recent.length ? `<table>${qs.recent.slice(0, 5).map((o) => `<tr><td><b>${esc(o.number)}</b> · ${esc(o.customer_name || '—')}<br><span class="muted">${QS_PAY[o.payment_method] || esc(o.payment_method)} · ${QS_STATUS[o.status] || esc(o.status)}</span></td><td class="r">${dt(o.total)}<br>${ago(o.created_at)}</td></tr>`).join('')}</table>` : '<div class="muted">Aucune commande pour le moment.</div>'}
+    ${qs.low_stock.length ? `<div class="list"><div class="muted">Stock bas :</div>${qs.low_stock.slice(0, 4).map((p) => `<div class="row"><span class="grow">${esc(p.name)}</span><b>${p.stock}</b></div>`).join('')}</div>` : ''}
+  `, [['Admin', 'https://quiet-sense.com/admin'], ['Boutique', 'https://quiet-sense.com']]));
+
+  out.push(card('Billie Jean Records', pillFor(site('bjr')), `
+    <div class="muted" style="font-size:14px">Le site est une vitrine : les réservations, devis et acomptes ne sont pas encore enregistrés dans une base. Cette carte se remplira dès qu'on les branchera (réservations du jour, demandes à valider, acomptes encaissés).</div>
+  `, [['Site', 'https://billiejeanrecords.com']]));
+
+  const fl = P.floriqa;
+  const B = fl.bookings || {};
+  out.push(card('Floriqa', pillFor(site('floriqa')), isErr(fl) ? `<div class="err">${esc(fl.error)}</div>` : `
+    <div class="stats">
+      ${stat(n(B.new), 'bookings nouveaux', B.new ? 'hl' : '')}
+      ${stat(n(B.in_progress), 'en cours')}
+      ${stat(n(B.accepted), 'acceptés')}
+      ${stat(n(fl.access_requests), "demandes d'accès", fl.access_requests ? 'alert' : '')}
+      ${stat(n(fl.members), 'membres room')}
+      ${stat(n(fl.files_week + fl.comments_week), 'activité 7 j')}
+    </div>
+    ${fl.recent.length ? `<table>${fl.recent.map((b) => `<tr><td><b>${esc(b.artist_name)}</b> · ${esc(b.event || '')}<br><span class="muted">${esc([b.city, b.dates].filter(Boolean).join(' · '))}</span></td><td class="r">${ago(b.created_at)}</td></tr>`).join('')}</table>` : '<div class="muted">Aucune nouvelle demande de booking.</div>'}
+  `, [['Admin', 'https://floriqa.xyz/admin/'], ['Site', 'https://floriqa.xyz']]));
+
+  const eg = P.egoshot, voice = site('voice');
+  out.push(card('EgoShot', voice ? (voice.ok ? '<span class="pill ok">vocal OK</span>' : '<span class="pill bad">vocal hors ligne</span>') : '', isErr(eg) ? `<div class="err">${esc(eg.error)}</div>` : `
+    <div class="stats">
+      ${stat(n(eg.playing_now), 'en partie maintenant', eg.playing_now ? 'hl' : '')}
+      ${stat(n(eg.rooms_live), 'salons ouverts')}
+      ${stat(n(eg.matches_today), "parties aujourd'hui")}
+      ${stat(n(eg.players), 'joueurs inscrits')}
+      ${stat('+' + n(eg.players_today), "nouveaux aujourd'hui")}
+      ${stat(n(eg.ads_today), "pubs vues aujourd'hui")}
+    </div>
+    <div class="list"><div class="row"><span class="grow muted">Parties sur 7 jours</span><b>${n(eg.matches_week)}</b></div>
+    <div class="row"><span class="grow muted">Joueurs bannis</span><b>${n(eg.banned)}</b></div></div>
+  `, [['Jouer', 'https://hamedkm.github.io/egoshot-play/'], ['Page', 'https://minebeatstudios.com/egoshot']]));
+
+  const pa = P.paradisme;
+  out.push(card('Paradisme', pillFor(site('paradisme')), isErr(pa) ? `<div class="err">${esc(pa.error)}</div>` : `
+    <div class="stats">
+      ${stat(n(pa.live_now), 'parties en cours', pa.live_now ? 'hl' : '')}
+      ${stat(n(pa.games_today), "parties aujourd'hui")}
+      ${stat(n(pa.games_week), 'parties 7 j')}
+      ${stat(n(pa.players_week), 'joueurs 7 j')}
+      ${stat(n(pa.questions), 'questions actives')}
+      ${stat('+' + n(pa.questions_week), 'questions 7 j')}
+    </div>
+  `, [['Jouer', 'https://paradisme.pages.dev']]));
+
+  $('#projects').innerHTML = out.join('');
+}
+
+function renderInfra(d) {
+  const sites = `<article class="card"><div class="card-h"><h2 class="grow">Sites</h2>${d.sites.every((s) => s.ok) ? '<span class="pill ok">tout va bien</span>' : '<span class="pill bad">problème</span>'}</div>
+    <table>${d.sites.map((s) => `<tr><td><span class="dot ${s.ok ? 'ok' : 'bad'}" style="display:inline-block;margin-right:8px"></span><a href="${s.url}" target="_blank" rel="noopener" style="text-decoration:none">${esc(s.name)}</a></td><td class="r">${s.ok ? s.ms + ' ms' : (s.status ? 'erreur ' + s.status : 'injoignable')}</td></tr>`).join('')}</table></article>`;
+  const doms = `<article class="card"><div class="card-h"><h2 class="grow">Noms de domaine</h2></div>
+    <table>${d.domains.map((x) => { const j = x.expires ? days(x.expires) : null; return `<tr><td>${esc(x.domain)}</td><td class="r" style="${j !== null && j < 45 ? 'color:var(--warn)' : ''}">${x.expires ? 'expire le ' + new Date(x.expires).toLocaleDateString('fr-FR') + ` (${j} j)` : 'date inconnue'}</td></tr>`; }).join('')}</table></article>`;
+  const s = d.supabase;
+  const bar = (v, max) => { const p = Math.min(100, Math.round(v / max * 100)); return `<div class="bar"><i class="${p > 90 ? 'bad' : p > 75 ? 'warn' : ''}" style="width:${Math.max(2, p)}%"></i></div>`; };
+  const supa = `<article class="card"><div class="card-h"><h2 class="grow">Supabase · ${esc(s.project)}</h2><span class="pill">offre gratuite</span></div>
+    ${s.error ? `<div class="err">${esc(s.error)}</div>` : `
+    <div class="list"><div class="row"><span class="grow">Base de données</span><span class="muted">${mb(s.db_bytes)} / ${mb(s.limits.db_bytes)}</span></div>${bar(s.db_bytes, s.limits.db_bytes)}</div>
+    <div class="list"><div class="row"><span class="grow">Fichiers (sons, modèles, room Floriqa)</span><span class="muted">${mb(s.storage_bytes)} / ${mb(s.limits.storage_bytes)}</span></div>${bar(s.storage_bytes, s.limits.storage_bytes)}</div>
+    <div class="row"><span class="grow muted">Comptes utilisateurs</span><b>${n(s.users)}</b></div>`}
+    <div class="card-f"><a href="https://supabase.com/dashboard/project/jzzxetoejcgzajekceos" target="_blank" rel="noopener">Tableau Supabase ↗</a></div></article>`;
+  $('#infra').innerHTML = sites + doms + supa;
+}
+
+function render(d) {
+  const t = todos(d);
+  $('#todo').innerHTML = t.length ? t.map((x) => `<${x.href ? `a href="${x.href}" target="_blank" rel="noopener"` : 'div'} class="todo-item"><span class="dot ${x.lvl}"></span><span class="grow">${esc(x.text)}</span><span class="tag">${esc(x.tag)}</span></${x.href ? 'a' : 'div'}>`).join('')
+    : '<div class="todo-item"><span class="dot ok"></span><span class="grow">Rien d\'urgent. Tout est sous contrôle.</span></div>';
+  renderProjects(d); renderInfra(d);
+  $('#updated').textContent = 'Mis à jour à ' + new Date(d.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  document.title = (t.filter((x) => x.lvl === 'bad').length ? `(${t.filter((x) => x.lvl === 'bad').length}) ` : '') + 'Minebeat HQ';
+}
+
+async function load() {
+  $('#updated').innerHTML = '<span class="spin"></span> Actualisation…';
+  try { render(await call('summary')); }
+  catch (e) {
+    if (e.code === 'password') return logout();
+    $('#updated').textContent = 'Impossible de charger : ' + (e.code === 'not_configured' ? 'mot de passe HQ pas encore créé dans Supabase' : e.message);
+  }
+}
+
+function showApp() {
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  load(); clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(); }, 60000);
+}
+function logout() {
+  store.del('hq_pw'); password = ''; clearInterval(timer);
+  $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#pw').focus();
+}
+
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  password = $('#pw').value.trim();
+  $('#loginBtn').disabled = true; $('#loginErr').classList.add('hidden');
+  try {
+    await call('check');
+    store.set('hq_pw', password, $('#remember').checked);
+    $('#pw').value = ''; showApp();
+  } catch (err) {
+    $('#loginErr').textContent = err.code === 'password' ? 'Mot de passe incorrect.' : err.code === 'not_configured' ? "Le mot de passe HQ n'est pas encore créé dans Supabase (secret HQ_PASSWORD)." : 'Erreur : ' + err.message;
+    $('#loginErr').classList.remove('hidden');
+  } finally { $('#loginBtn').disabled = false; }
+});
+$('#refresh').onclick = load;
+$('#logout').onclick = logout;
+document.addEventListener('visibilitychange', () => { if (!document.hidden && password && !$('#app').classList.contains('hidden')) load(); });
+
+if (password) showApp(); else logout();
+</script>
+</body>
+</html>
