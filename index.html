@@ -99,9 +99,12 @@ td.r{text-align:right;color:var(--muted);white-space:nowrap}
       <h1>Minebeat HQ</h1>
       <div class="sub" id="updated">Chargement…</div>
     </div>
+    <button class="btn" id="bell" title="Notifications">🔔</button>
     <button class="btn" id="refresh" title="Actualiser">↻</button>
     <button class="btn" id="logout" title="Se déconnecter">⎋</button>
   </header>
+
+  <div class="card hidden" id="notifBox" style="margin-bottom:6px"></div>
 
   <div class="section-title">À traiter maintenant</div>
   <div class="todo" id="todo"><div class="empty"><span class="spin"></span> Chargement…</div></div>
@@ -306,11 +309,64 @@ $('#loginForm').addEventListener('submit', async (e) => {
     await call('check');
     store.set('hq_pw', password, $('#remember').checked);
     $('#pw').value = ''; showApp();
+    if (pushOK && Notification.permission !== 'granted') { $('#notifBox').classList.remove('hidden'); renderNotif(); }
   } catch (err) {
     $('#loginErr').textContent = err.code === 'password' ? 'Mot de passe incorrect.' : err.code === 'not_configured' ? "Le mot de passe HQ n'est pas encore créé dans Supabase (secret HQ_PASSWORD)." : 'Erreur : ' + err.message;
     $('#loginErr').classList.remove('hidden');
   } finally { $('#loginBtn').disabled = false; }
 });
+// ---------- Notifications sur le téléphone ----------
+const VAPID = 'BOESo_VTGRVGFcj_3TtsTLyzk65uUY2q3Kn2-FcI1QEwXs12fjFB82LFiBb2hbQKIdDD68fBXJczoFqqdhYbDR0';
+const pushOK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const urlB64 = (b) => { const s = atob((b + '==='.slice((b.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, (c) => c.charCodeAt(0)); };
+const deviceLabel = () => (isIOS ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'Ordinateur') + ' · ' + new Date().toLocaleDateString('fr-FR');
+async function currentSub() {
+  if (!pushOK) return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+async function enablePush() {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error('Notifications refusées. Autorise-les dans Réglages → Notifications → Minebeat HQ.');
+  const reg = await navigator.serviceWorker.register('sw.js');
+  await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(VAPID) });
+  const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: 'Bearer ' + ANON }, body: JSON.stringify({ password, action: 'subscribe', sub: sub.toJSON(), label: deviceLabel() }) });
+  if (!r.ok) throw new Error('Enregistrement impossible (' + r.status + ')');
+}
+async function renderNotif() {
+  const box = $('#notifBox');
+  let html = '<div class="card-h"><h2 class="grow">Notifications</h2><button class="btn" id="notifClose">✕</button></div>';
+  if (isIOS && !standalone) {
+    html += `<div class="muted" style="font-size:14px">Sur iPhone, les notifications marchent seulement depuis l'app installée :<br>1. Dans Safari, touche <b>Partager</b> (le carré avec la flèche)<br>2. Choisis <b>Sur l'écran d'accueil</b><br>3. Ouvre <b>Minebeat HQ</b> depuis l'écran d'accueil, puis reviens ici avec 🔔</div>`;
+  } else if (!pushOK) {
+    html += '<div class="muted">Cet appareil ne permet pas les notifications.</div>';
+  } else {
+    const sub = await currentSub();
+    const on = sub && Notification.permission === 'granted';
+    html += on
+      ? `<div class="row"><span class="dot ok"></span><span class="grow">Activées sur cet appareil</span></div>
+         <div class="muted" style="font-size:13px">Tu es prévenu pour : nouvelle commande Quiet Sense, stock bas, demande de booking ou d'accès Floriqa, site ou serveur vocal en panne, domaine qui expire. Vérification chaque minute.</div>
+         <div class="card-f"><button class="btn primary" id="notifTest">Envoyer un test</button><button class="btn" id="notifOff">Désactiver ici</button></div>`
+      : `<div class="muted" style="font-size:14px">Reçois une alerte sur cet appareil dès qu'un projet a quelque chose à traiter, même quand l'app est fermée.</div>
+         <div class="card-f"><button class="btn primary" id="notifOn">Activer les notifications</button></div>`;
+    const dv = await call('devices').catch(() => ({ devices: [] }));
+    if (dv.devices?.length) html += `<div class="list"><div class="muted">Appareils prévenus :</div>${dv.devices.map((x) => `<div class="row">• ${esc(x.label || 'Appareil')}</div>`).join('')}</div>`;
+  }
+  html += '<div id="notifMsg" class="muted" style="font-size:13px"></div>';
+  box.innerHTML = html;
+  $('#notifClose').onclick = () => box.classList.add('hidden');
+  const msg = (t) => { $('#notifMsg').textContent = t; };
+  if ($('#notifOn')) $('#notifOn').onclick = async () => { msg('Activation…'); try { await enablePush(); await renderNotif(); $('#notifMsg').textContent = 'C\'est activé ✅'; } catch (e) { msg(e.message); } };
+  if ($('#notifTest')) $('#notifTest').onclick = async () => { msg('Envoi…'); try { const r = await call('test'); msg(r.sent ? 'Test envoyé : la notification arrive dans quelques secondes.' : 'Aucun appareil enregistré.'); } catch (e) { msg(e.message); } };
+  if ($('#notifOff')) $('#notifOff').onclick = async () => { const s = await currentSub(); if (s) { await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: 'Bearer ' + ANON }, body: JSON.stringify({ password, action: 'unsubscribe', endpoint: s.endpoint }) }); await s.unsubscribe(); } renderNotif(); };
+}
+$('#bell').onclick = () => { const b = $('#notifBox'); b.classList.toggle('hidden'); if (!b.classList.contains('hidden')) renderNotif(); };
+if (pushOK) navigator.serviceWorker.register('sw.js').catch(() => {});
+
 $('#refresh').onclick = load;
 $('#logout').onclick = logout;
 document.addEventListener('visibilitychange', () => { if (!document.hidden && password && !$('#app').classList.contains('hidden')) load(); });

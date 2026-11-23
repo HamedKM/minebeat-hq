@@ -1,6 +1,7 @@
 // Minebeat HQ : rassemble les chiffres importants de tous les projets (lecture seule).
 // Mot de passe du panneau : secret HQ_PASSWORD. Clé partagée avec Quiet Sense : secret HQ_KEY.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { sendPush, type Sub, type Vapid } from './push.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -82,6 +83,8 @@ async function floriqa(db: any, t: ReturnType<typeof tunisStarts>) {
     bookings: by,
     bookings_week: (bk || []).filter((b: any) => b.created_at >= t.week).length,
     recent: (bk || []).filter((b: any) => b.status === 'new').slice(0, 5),
+    new_ids: (bk || []).filter((b: any) => b.status === 'new').map((b: any) => ({ id: b.id, artist: b.artist_name, event: b.event, city: b.city })),
+    access_list: ((await db.from('floriqa_access_requests').select('user_id,display_name').limit(200)).data || []),
     access_requests: await count(db.from('floriqa_access_requests').select('user_id', head)),
     members: await count(db.from('floriqa_members').select('user_id', head)),
     projects: await count(db.from('floriqa_projects').select('id', head)),
@@ -121,19 +124,7 @@ async function paradisme(db: any, t: ReturnType<typeof tunisStarts>) {
   };
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  if (req.method !== 'POST') return json({ error: 'method' }, 405);
-  const secret = (Deno.env.get('HQ_PASSWORD') || '').trim();
-  let body: any; try { body = await req.json(); } catch { return json({ error: 'json' }, 400); }
-  if (!secret || secret.length < 8) return json({ error: 'not_configured' }, 503);
-  if (typeof body?.password !== 'string' || !(await same(body.password.trim(), secret))) {
-    await new Promise((r) => setTimeout(r, 900));
-    return json({ error: 'password' }, 401);
-  }
-  if (body.action === 'check') return json({ ok: true });
-
-  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+async function collect(db: any, withDomains: boolean) {
   const t = tunisStarts();
   const [qs, fl, eg, pa, sites, domains, supa] = await Promise.all([
     safe(quietSense),
@@ -141,14 +132,140 @@ Deno.serve(async (req) => {
     safe(() => egoshot(db, t)),
     safe(() => paradisme(db, t)),
     Promise.all(SITES.map(checkSite)),
-    Promise.all(DOMAINS.map(domainExpiry)),
+    withDomains ? Promise.all(DOMAINS.map(domainExpiry)) : Promise.resolve([] as any[]),
     safe(async () => { const { data, error } = await db.rpc('hq_db_stats'); if (error) throw error; return data; }),
   ]);
-  return json({
+  return {
     ok: true,
     at: new Date().toISOString(),
     projects: { quiet_sense: qs, floriqa: fl, egoshot: eg, paradisme: pa, bjr: { connected: false } },
     sites, domains,
     supabase: { project: 'Paradisme', limits: { db_bytes: 500 * 1024 * 1024, storage_bytes: 1024 * 1024 * 1024 }, ...(supa as any) },
-  });
+  } as any;
+}
+
+const cfg = async (db: any, key: string) => (await db.from('hq_config').select('value').eq('key', key).maybeSingle()).data?.value;
+const dt = (m: number) => new Intl.NumberFormat('fr-FR').format(Math.round((m || 0) / 1000)) + ' DT';
+const PAY: Record<string, string> = { cod: 'à la livraison', card: 'payée par carte', preorder: 'précommande' };
+const HQ = 'https://hq.minebeat.org/';
+
+async function notifyAll(db: any, items: { title: string; body: string; url?: string; tag?: string }[]) {
+  if (!items.length) return { sent: 0 };
+  const vapid = await cfg(db, 'vapid') as Vapid;
+  const { data: subs } = await db.from('hq_push_subs').select('endpoint,p256dh,auth');
+  let list = items;
+  if (list.length > 5) list = [...items.slice(0, 4), { title: 'Minebeat HQ', body: `+ ${items.length - 4} autres choses à traiter`, url: HQ, tag: 'hq-more' }];
+  let sent = 0;
+  for (const s of (subs || []) as Sub[]) {
+    for (const it of list) {
+      try {
+        const r = await sendPush(s, { url: HQ, ...it }, vapid);
+        if ((r as any).gone) { await db.from('hq_push_subs').delete().eq('endpoint', s.endpoint); break; }
+        sent++;
+      } catch (e) { console.error('push', String(e)); }
+    }
+  }
+  return { sent };
+}
+
+// Compare l'état actuel au précédent et prévient de ce qui est nouveau
+async function scan(db: any) {
+  const today = new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
+  const prev = (await db.from('hq_state').select('value').eq('key', 'scan').maybeSingle()).data?.value as any;
+  const st: any = prev ? structuredClone(prev) : { qs_seen: [], fl_seen: [], acc_seen: [], low_seen: [], down: {}, dom_day: '', dom_alerted: {} };
+  const d = await collect(db, st.dom_day !== today);
+  const out: { title: string; body: string; url?: string; tag?: string }[] = [];
+  const P = d.projects;
+
+  const qs = P.quiet_sense;
+  if (!qs.error) {
+    const qsFirst = !st.qs_init; st.qs_init = true; // première lecture réussie : on mémorise sans prévenir
+    for (const o of [...(qs.recent || [])].reverse()) {
+      if (st.qs_seen.includes(o.number)) continue;
+      st.qs_seen.push(o.number);
+      if (!qsFirst) out.push({ title: '🛍️ Quiet Sense · nouvelle commande', body: `${o.number} · ${o.customer_name || 'client'} · ${dt(o.total)} · ${PAY[o.payment_method] || o.payment_method}`, url: 'https://quiet-sense.com/admin', tag: 'qs-' + o.number });
+    }
+    st.qs_seen = st.qs_seen.slice(-200);
+    const low = (qs.low_stock || []).map((p: any) => p.name);
+    const newLow = low.filter((n: string) => !st.low_seen.includes(n));
+    if (newLow.length && !qsFirst) out.push({ title: '📦 Quiet Sense · stock bas', body: newLow.slice(0, 3).join(', ') + (newLow.length > 3 ? ` et ${newLow.length - 3} autres` : ''), url: 'https://quiet-sense.com/admin', tag: 'qs-low' });
+    st.low_seen = low;
+  }
+  const fl = P.floriqa;
+  if (!fl.error) {
+    const flFirst = !st.fl_init; st.fl_init = true;
+    for (const b of fl.new_ids || []) {
+      if (st.fl_seen.includes(b.id)) continue;
+      st.fl_seen.push(b.id);
+      if (!flFirst) out.push({ title: '🎤 Floriqa · demande de booking', body: [b.artist, b.event, b.city].filter(Boolean).join(' · '), url: 'https://floriqa.xyz/admin/', tag: 'fl-' + b.id });
+    }
+    st.fl_seen = st.fl_seen.slice(-300);
+    for (const a of fl.access_list || []) {
+      if (st.acc_seen.includes(a.user_id)) continue;
+      st.acc_seen.push(a.user_id);
+      if (!flFirst) out.push({ title: "🔑 Floriqa · demande d'accès à la room", body: a.display_name || 'Nouvel artiste', url: 'https://floriqa.xyz/admin/', tag: 'fl-acc-' + a.user_id });
+    }
+    st.acc_seen = st.acc_seen.slice(-300);
+  }
+  for (const s of d.sites) {
+    const n = s.ok ? 0 : (st.down[s.id] || 0) + 1;
+    if (n === 2) out.push({ title: '🔴 Site hors ligne', body: `${s.name} ne répond plus`, url: HQ, tag: 'down-' + s.id });
+    if (n === 0 && (st.down[s.id] || 0) >= 2) out.push({ title: '🟢 Site rétabli', body: `${s.name} répond de nouveau`, url: HQ, tag: 'down-' + s.id });
+    st.down[s.id] = n;
+  }
+  if (st.dom_day !== today && d.domains.length) {
+    st.dom_day = today;
+    for (const x of d.domains) {
+      if (!x.expires) continue;
+      const days = Math.floor((new Date(x.expires).getTime() - Date.now()) / 864e5);
+      const lvl = days <= 7 ? 7 : days <= 30 ? 30 : 0;
+      if (lvl && st.dom_alerted[x.domain] !== lvl) out.push({ title: '🌐 Nom de domaine', body: `${x.domain} expire dans ${days} jours`, url: HQ, tag: 'dom-' + x.domain });
+      st.dom_alerted[x.domain] = lvl;
+    }
+  }
+  await db.from('hq_state').upsert({ key: 'scan', value: st, updated_at: new Date().toISOString() });
+  const r = await notifyAll(db, out);
+  return { events: out.length, ...r };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return json({ error: 'method' }, 405);
+  let body: any; try { body = await req.json(); } catch { return json({ error: 'json' }, 400); }
+  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  // Vérification automatique chaque minute (lancée par la base elle-même)
+  if (body.action === 'scan') {
+    const secret = String(await cfg(db, 'cron_secret') || '');
+    if (!secret || typeof body.cron !== 'string' || !(await same(body.cron, secret))) return json({ error: 'forbidden' }, 403);
+    try { return json({ ok: true, ...(await scan(db)) }); } catch (e) { return json({ error: String((e as any)?.message || e) }, 500); }
+  }
+
+  const pw = (Deno.env.get('HQ_PASSWORD') || '').trim();
+  if (!pw || pw.length < 8) return json({ error: 'not_configured' }, 503);
+  if (typeof body?.password !== 'string' || !(await same(body.password.trim(), pw))) {
+    await new Promise((r) => setTimeout(r, 900));
+    return json({ error: 'password' }, 401);
+  }
+  if (body.action === 'check') return json({ ok: true });
+  if (body.action === 'subscribe') {
+    const s = body.sub || {};
+    if (typeof s.endpoint !== 'string' || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return json({ error: 'sub' }, 400);
+    const { error } = await db.from('hq_push_subs').upsert({ endpoint: s.endpoint, p256dh: s.keys.p256dh, auth: s.keys.auth, label: String(body.label || '').slice(0, 60) });
+    return error ? json({ error: error.message }, 500) : json({ ok: true });
+  }
+  if (body.action === 'unsubscribe') {
+    await db.from('hq_push_subs').delete().eq('endpoint', String(body.endpoint || ''));
+    return json({ ok: true });
+  }
+  if (body.action === 'devices') {
+    const { data } = await db.from('hq_push_subs').select('label,created_at').order('created_at');
+    return json({ ok: true, devices: data || [] });
+  }
+  if (body.action === 'test') {
+    return json({ ok: true, ...(await notifyAll(db, [{ title: 'Minebeat HQ', body: 'Les notifications fonctionnent ✅', url: HQ, tag: 'hq-test' }])) });
+  }
+  const d = await collect(db, true);
+  for (const k of ['new_ids', 'access_list']) delete (d.projects.floriqa as any)?.[k];
+  return json(d);
 });
